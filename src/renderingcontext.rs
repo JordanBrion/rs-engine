@@ -56,7 +56,7 @@ impl MyRenderingContext {
                 instance: instance,
                 gpu: gpu,
                 logical_device: logical_device,
-                index_of_queue_family: index_of_queue_family
+                index_of_queue_family: index_of_queue_family,
                 queue: queue,
             }
         }
