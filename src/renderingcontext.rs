@@ -54,11 +54,11 @@ impl MyRenderingContext {
                 flags: ash::vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER,
                 queue_family_index: index_of_queue_family as u32,
             };
-    
+
             let command_pool = logical_device
                 .create_command_pool(&command_pool_create_info, None)
                 .expect("Cannot create command pool");
-    
+
             MyRenderingContext {
                 entry: entry,
                 instance: instance,

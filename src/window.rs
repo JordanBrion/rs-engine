@@ -11,7 +11,7 @@ impl MyWindow {
     pub fn new() -> Result<MyWindow, &'static str> {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
-        let dimensions = ash::vk::Extent2D { 
+        let dimensions = ash::vk::Extent2D {
             width: 1280,
             height: 720,
         };

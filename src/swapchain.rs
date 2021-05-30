@@ -9,7 +9,11 @@ pub struct MySwapchain {
 }
 
 impl MySwapchain {
-    pub fn new(context: &MyRenderingContext, window: &MyWindow, surface: &MySurface) -> MySwapchain {
+    pub fn new(
+        context: &MyRenderingContext,
+        window: &MyWindow,
+        surface: &MySurface,
+    ) -> MySwapchain {
         unsafe {
             let swapchain_loader =
                 ash::extensions::khr::Swapchain::new(&context.instance, &context.logical_device);

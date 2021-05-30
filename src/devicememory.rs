@@ -15,4 +15,4 @@ pub unsafe fn search_physical_device_memory_type(
         }
     }
     Err("Cannot find device memory type")
-}  
+}

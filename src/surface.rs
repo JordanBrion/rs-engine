@@ -11,7 +11,10 @@ pub struct MySurface {
 }
 
 impl MySurface {
-    pub fn new(context: &MyRenderingContext, window: &mut MyWindow) -> Result<MySurface, &'static str> {
+    pub fn new(
+        context: &MyRenderingContext,
+        window: &mut MyWindow,
+    ) -> Result<MySurface, &'static str> {
         unsafe {
             let surface_loader =
                 ash::extensions::khr::Surface::new(&context.entry, &context.instance);
@@ -68,7 +71,7 @@ impl MySurface {
                 capabilities: surface_capabilities,
                 format: available_format,
                 image_count: image_count as usize,
-                v_present_modes: v_surface_present_modes
+                v_present_modes: v_surface_present_modes,
             })
         }
     }

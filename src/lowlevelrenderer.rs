@@ -516,22 +516,22 @@ impl MyLowLevelRendererBuilder {
                 .create_descriptor_pool(&descriptor_pool_create_info, None)
                 .expect("Cannot create descriptor pool");
 
-                let vertex_buffer_content = vec![
-                    MyPointData {
-                        position: glm::vec3(0f32, 0.5f32, 0f32),
-                        color: glm::vec3(1.0f32, 0.0f32, 0.0f32),
-                    },
-                    MyPointData {
-                        position: glm::vec3(0.5f32, -0.5f32, 0f32),
-                        color: glm::vec3(0f32, 1.0f32, 0f32),
-                    },
-                    MyPointData {
-                        position: glm::vec3(-0.5f32, -0.5f32, 0f32),
-                        color: glm::vec3(0f32, 0f32, 1.0f32),
-                    },
-                ];
+            let vertex_buffer_content = vec![
+                MyPointData {
+                    position: glm::vec3(0f32, 0.5f32, 0f32),
+                    color: glm::vec3(1.0f32, 0.0f32, 0.0f32),
+                },
+                MyPointData {
+                    position: glm::vec3(0.5f32, -0.5f32, 0f32),
+                    color: glm::vec3(0f32, 1.0f32, 0f32),
+                },
+                MyPointData {
+                    position: glm::vec3(-0.5f32, -0.5f32, 0f32),
+                    color: glm::vec3(0f32, 0f32, 1.0f32),
+                },
+            ];
 
-                let vertex_buffer = MyVertexBuffer::new(&context, vertex_buffer_content);
+            let vertex_buffer = MyVertexBuffer::new(&context, vertex_buffer_content);
             MyLowLevelRendererBuilder {
                 window: window,
                 context: context,
@@ -549,14 +549,14 @@ impl MyLowLevelRendererBuilder {
 
     pub fn build(self) -> MyLowLevelRenderer {
         let v_frames = self.allocate_frames();
-            MyLowLevelRenderer {
-                window: self.window,
-                context: self.context,
-                surface: self.surface,
-                swapchain: self.swapchain,
-                vertex_buffer: self.vertex_buffer,
-                v_frames: v_frames,
-            }
+        MyLowLevelRenderer {
+            window: self.window,
+            context: self.context,
+            surface: self.surface,
+            swapchain: self.swapchain,
+            vertex_buffer: self.vertex_buffer,
+            v_frames: v_frames,
+        }
     }
 
     fn allocate_frames(&self) -> Vec<MyFrame> {
