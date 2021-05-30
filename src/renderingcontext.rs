@@ -26,6 +26,7 @@ pub struct MyRenderingContext {
     pub entry: ash::Entry,
     pub gpu: ash::vk::PhysicalDevice,
     pub logical_device: ash::Device,
+    pub index_of_queue_family: usize,
     pub queue: ash::vk::Queue,
 }
 
@@ -55,6 +56,7 @@ impl MyRenderingContext {
                 instance: instance,
                 gpu: gpu,
                 logical_device: logical_device,
+                index_of_queue_family: index_of_queue_family
                 queue: queue,
             }
         }
