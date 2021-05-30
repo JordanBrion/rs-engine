@@ -3,7 +3,8 @@ use crate::{mvp::MyMvp, renderingcontext::*};
 use ash::version::DeviceV1_0;
 
 pub struct MyUniformBuffer {
-    id: ash::vk::Buffer,
+    pub id: ash::vk::Buffer,
+    device_memory: ash::vk::DeviceMemory,
 }
 
 impl MyUniformBuffer {
@@ -48,7 +49,28 @@ impl MyUniformBuffer {
                 .logical_device
                 .bind_buffer_memory(uniform_buffer, device_memory, 0)
                 .expect("Cannot bind uniform buffer to its memory");
-            MyUniformBuffer { id: uniform_buffer }
+            MyUniformBuffer {
+                id: uniform_buffer,
+                device_memory: device_memory,
+            }
         }
+    }
+
+    pub unsafe fn update(&self, logical_device: &ash::Device, matrices: &mut MyMvp) {
+        matrices.m_model = glm::rotate(&matrices.m_model, 0.01, &glm::vec3(0.0, 1.0, 0.0));
+        let p_data = logical_device
+            .map_memory(
+                self.device_memory,
+                0,
+                std::mem::size_of::<MyMvp>() as ash::vk::DeviceSize,
+                Default::default(),
+            )
+            .expect("Cannot map device memory");
+        std::ptr::copy_nonoverlapping(
+            matrices as *const MyMvp as *const std::ffi::c_void,
+            p_data,
+            std::mem::size_of::<MyMvp>(),
+        );
+        logical_device.unmap_memory(self.device_memory);
     }
 }
