@@ -2,11 +2,12 @@ use crate::{renderingcontext::*, window::MyWindow};
 use ash::version::InstanceV1_0;
 use ash::vk::Handle;
 
-struct MySurface {
-    inner: ash::vk::SurfaceKHR,
-    capabilities: ash::vk::SurfaceCapabilitiesKHR,
-    format: ash::vk::SurfaceFormatKHR,
-    image_count: usize,
+pub struct MySurface {
+    pub inner: ash::vk::SurfaceKHR,
+    pub capabilities: ash::vk::SurfaceCapabilitiesKHR,
+    pub format: ash::vk::SurfaceFormatKHR,
+    pub image_count: usize,
+    pub v_present_modes: Vec<ash::vk::PresentModeKHR>,
 }
 
 impl MySurface {
@@ -46,29 +47,28 @@ impl MySurface {
                 surface_capabilities.min_image_count + 1
             };
 
-            let extent = if surface_capabilities.current_extent.width != !(0 as u32) {
+            window.dimensions = if surface_capabilities.current_extent.width != !(0 as u32) {
                 surface_capabilities.current_extent
             } else {
                 ash::vk::Extent2D {
                     width: num::clamp(
-                        window.width as u32,
+                        window.dimensions.width as u32,
                         surface_capabilities.min_image_extent.width,
                         surface_capabilities.max_image_extent.width,
                     ),
                     height: num::clamp(
-                        window.height as u32,
+                        window.dimensions.height as u32,
                         surface_capabilities.min_image_extent.height,
                         surface_capabilities.max_image_extent.height,
                     ),
                 }
             };
-            window.width = extent.width as usize;
-            window.height = extent.height as usize;
             Ok(MySurface {
                 inner: surface,
                 capabilities: surface_capabilities,
                 format: available_format,
                 image_count: image_count as usize,
+                v_present_modes: v_surface_present_modes
             })
         }
     }
