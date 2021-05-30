@@ -1,10 +1,10 @@
 use crate::renderingcontext::*;
 use sdl2::*;
 
-struct MyWindow {
+pub struct MyWindow {
     width: usize,
     height: usize,
-    inner: sdl2::video::Window,
+    pub inner: sdl2::video::Window,
 }
 
 impl MyWindow {
