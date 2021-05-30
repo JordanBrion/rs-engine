@@ -13,12 +13,14 @@ pub struct MyPointData {
 pub struct MyVertexBuffer {
     pub id: ash::vk::Buffer,
     pub offset: usize,
+    pub number_of_vertices: usize,
 }
 
 impl MyVertexBuffer {
     fn new(context: &MyRenderingContext, content: Vec<MyPointData>) -> MyVertexBuffer {
         unsafe {
-            let bytes_count = content.len() * std::mem::size_of::<MyPointData>();
+            let number_of_vertices = content.len();
+            let bytes_count = number_of_vertices * std::mem::size_of::<MyPointData>();
             // STAGING BUFFER CREATION
             let staging_buffer_create_info = ash::vk::BufferCreateInfo {
                 s_type: ash::vk::StructureType::BUFFER_CREATE_INFO,
@@ -208,6 +210,7 @@ impl MyVertexBuffer {
             MyVertexBuffer {
                 id: vertex_buffer,
                 offset: vertex_buffer_offset as usize,
+                number_of_vertices: number_of_vertices,
             }
         }
     }
