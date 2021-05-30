@@ -2,14 +2,14 @@ use crate::renderingcontext::*;
 use crate::surface::*;
 use crate::window::*;
 
-struct MySwapchain {
-    loader: ash::extensions::khr::Swapchain,
-    inner: ash::vk::SwapchainKHR,
-    v_images: Vec<ash::vk::Image>,
+pub struct MySwapchain {
+    pub loader: ash::extensions::khr::Swapchain,
+    pub inner: ash::vk::SwapchainKHR,
+    pub v_images: Vec<ash::vk::Image>,
 }
 
 impl MySwapchain {
-    fn new(context: &MyRenderingContext, window: &MyWindow, surface: &MySurface) -> MySwapchain {
+    pub fn new(context: &MyRenderingContext, window: &MyWindow, surface: &MySurface) -> MySwapchain {
         unsafe {
             let swapchain_loader =
                 ash::extensions::khr::Swapchain::new(&context.instance, &context.logical_device);
@@ -47,6 +47,10 @@ impl MySwapchain {
                 v_images: v_swapchain_images,
             }
         }
+    }
+
+    pub fn size(&self) -> usize {
+        self.v_images.len()
     }
 
     fn choose_swapchain_present_mode(
