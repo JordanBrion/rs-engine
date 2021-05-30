@@ -6,8 +6,8 @@ use ash::vk::Handle;
 
 #[repr(C)]
 pub struct MyPointData {
-    position: glm::Vec3,
-    color: glm::Vec3,
+    pub position: glm::Vec3,
+    pub color: glm::Vec3,
 }
 
 pub struct MyVertexBuffer {
@@ -17,7 +17,7 @@ pub struct MyVertexBuffer {
 }
 
 impl MyVertexBuffer {
-    fn new(context: &MyRenderingContext, content: Vec<MyPointData>) -> MyVertexBuffer {
+    pub fn new(context: &MyRenderingContext, content: Vec<MyPointData>) -> MyVertexBuffer {
         unsafe {
             let number_of_vertices = content.len();
             let bytes_count = number_of_vertices * std::mem::size_of::<MyPointData>();

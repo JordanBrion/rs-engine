@@ -1,3 +1,5 @@
+use ash::version::InstanceV1_0;
+
 pub unsafe fn search_physical_device_memory_type(
     instance: &ash::Instance,
     gpu: &ash::vk::PhysicalDevice,

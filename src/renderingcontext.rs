@@ -27,6 +27,7 @@ pub struct MyRenderingContext {
     pub logical_device: ash::Device,
     pub index_of_queue_family: usize,
     pub queue: ash::vk::Queue,
+    pub command_pool: ash::vk::CommandPool,
 }
 
 impl MyRenderingContext {
@@ -47,6 +48,17 @@ impl MyRenderingContext {
                 Self::create_logical_device(&instance, &gpu, index_of_queue_family)
                     .expect("Cannot create logical device");
             let queue = logical_device.get_device_queue(index_of_queue_family as u32, 0);
+            let command_pool_create_info = ash::vk::CommandPoolCreateInfo {
+                s_type: ash::vk::StructureType::COMMAND_POOL_CREATE_INFO,
+                p_next: std::ptr::null(),
+                flags: ash::vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER,
+                queue_family_index: index_of_queue_family as u32,
+            };
+    
+            let command_pool = logical_device
+                .create_command_pool(&command_pool_create_info, None)
+                .expect("Cannot create command pool");
+    
             MyRenderingContext {
                 entry: entry,
                 instance: instance,
@@ -54,6 +66,7 @@ impl MyRenderingContext {
                 logical_device: logical_device,
                 index_of_queue_family: index_of_queue_family,
                 queue: queue,
+                command_pool: command_pool,
             }
         }
     }
