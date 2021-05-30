@@ -2,8 +2,8 @@ use crate::renderingcontext::*;
 use sdl2::*;
 
 pub struct MyWindow {
-    width: usize,
-    height: usize,
+    pub width: usize,
+    pub height: usize,
     pub inner: sdl2::video::Window,
 }
 

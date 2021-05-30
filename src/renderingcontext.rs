@@ -25,6 +25,8 @@ pub struct MyRenderingContext {
     pub instance: ash::Instance,
     pub entry: ash::Entry,
     pub gpu: ash::vk::PhysicalDevice,
+    pub logical_device: ash::Device,
+    pub queue: ash::vk::Queue,
 }
 
 impl MyRenderingContext {
@@ -41,11 +43,19 @@ impl MyRenderingContext {
                     .expect("Cannot get instance extensions!"),
             );
             let gpu = Self::pick_up_one_gpu(&instance).expect("Cannot find GPU");
+            let index_of_queue_family = Self::lookup_queue_family_index(&instance, &gpu)
+                .expect("Cannot find graphics queue family");
+            let logical_device =
+                Self::create_logical_device(&instance, &gpu, index_of_queue_family)
+                    .expect("Cannot create logical device");
+            let queue = logical_device.get_device_queue(index_of_queue_family as u32, 0);
             MyRenderingContext {
                 sdl_context: sdl_context,
                 entry: entry,
                 instance: instance,
                 gpu: gpu,
+                logical_device: logical_device,
+                queue: queue,
             }
         }
     }
@@ -88,5 +98,54 @@ impl MyRenderingContext {
             Ok(_) => None,
             Err(_e) => None,
         }
+    }
+
+    unsafe fn lookup_queue_family_index(
+        instance: &ash::Instance,
+        gpu: &ash::vk::PhysicalDevice,
+    ) -> Result<usize, &'static str> {
+        let queue_family_properties = instance.get_physical_device_queue_family_properties(*gpu);
+        for i in 0..queue_family_properties.len() {
+            if queue_family_properties[i]
+                .queue_flags
+                .contains(ash::vk::QueueFlags::GRAPHICS)
+            {
+                return Ok(i);
+            }
+        }
+        Err("Queue family not found")
+    }
+
+    unsafe fn create_logical_device(
+        instance: &ash::Instance,
+        gpu: &ash::vk::PhysicalDevice,
+        index_of_queue_family: usize,
+    ) -> Result<ash::Device, ash::vk::Result> {
+        let priority = 1.0_f32;
+        let queue_create_info = ash::vk::DeviceQueueCreateInfo {
+            s_type: ash::vk::StructureType::DEVICE_QUEUE_CREATE_INFO,
+            p_next: std::ptr::null(),
+            flags: Default::default(),
+            queue_family_index: index_of_queue_family as u32,
+            queue_count: 1,
+            p_queue_priorities: &priority,
+        };
+
+        let mut v_extensions = Vec::new();
+        v_extensions.push(ash::extensions::khr::Swapchain::name());
+        let v_extensions_c = v_extensions.iter().map(|e| e.as_ptr() as *const i8);
+        let device_create_info = ash::vk::DeviceCreateInfo {
+            s_type: ash::vk::StructureType::DEVICE_CREATE_INFO,
+            p_next: std::ptr::null(),
+            flags: Default::default(),
+            queue_create_info_count: 1,
+            p_queue_create_infos: &queue_create_info,
+            enabled_layer_count: 0,
+            pp_enabled_layer_names: std::ptr::null(),
+            enabled_extension_count: v_extensions_c.len() as u32,
+            pp_enabled_extension_names: v_extensions.as_ptr() as *const *const i8,
+            p_enabled_features: std::ptr::null(),
+        };
+        instance.create_device(*gpu, &device_create_info, None)
     }
 }
