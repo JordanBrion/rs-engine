@@ -21,7 +21,6 @@ use ash::vk::Handle;
 use crate::window::*;
 
 pub struct MyRenderingContext {
-    pub sdl_context: sdl2::Sdl,
     pub instance: ash::Instance,
     pub entry: ash::Entry,
     pub gpu: ash::vk::PhysicalDevice,
@@ -33,8 +32,6 @@ pub struct MyRenderingContext {
 impl MyRenderingContext {
     pub fn new(window: &MyWindow) -> MyRenderingContext {
         unsafe {
-            let sdl_context = sdl2::init().unwrap();
-            let video_subsystem = sdl_context.video().unwrap();
             let entry = ash::Entry::new().expect("Cannot create entry");
             let instance = Self::create_instance(
                 &entry,
@@ -51,7 +48,6 @@ impl MyRenderingContext {
                     .expect("Cannot create logical device");
             let queue = logical_device.get_device_queue(index_of_queue_family as u32, 0);
             MyRenderingContext {
-                sdl_context: sdl_context,
                 entry: entry,
                 instance: instance,
                 gpu: gpu,
