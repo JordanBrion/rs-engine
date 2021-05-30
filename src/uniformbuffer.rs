@@ -8,13 +8,13 @@ pub struct MyUniformBuffer {
 }
 
 impl MyUniformBuffer {
-    pub fn new(context: &MyRenderingContext, data: MyMvp) -> MyUniformBuffer {
+    pub fn new(context: &MyRenderingContext, bytes_count: usize) -> MyUniformBuffer {
         unsafe {
             let buffer_create_info = ash::vk::BufferCreateInfo {
                 s_type: ash::vk::StructureType::BUFFER_CREATE_INFO,
                 p_next: std::ptr::null(),
                 flags: Default::default(),
-                size: std::mem::size_of::<MyMvp>() as ash::vk::DeviceSize,
+                size: bytes_count as u64,
                 usage: ash::vk::BufferUsageFlags::UNIFORM_BUFFER,
                 sharing_mode: ash::vk::SharingMode::EXCLUSIVE,
                 queue_family_index_count: 0,
