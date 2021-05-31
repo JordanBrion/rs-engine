@@ -129,7 +129,7 @@ impl MyLowLevelRenderer {
 
                 self.context
                     .logical_device
-                    .reset_fences(&[v_fences_ref_wait_gpu[current_frame_index]])
+                    .reset_fences(&[v_fences_ref_wait_gpu[index_of_acquired_image]])
                     .expect("Cannot reset fences");
 
                 let current_frame = self.v_frames.index(index_of_acquired_image);
@@ -155,7 +155,7 @@ impl MyLowLevelRenderer {
                     .queue_submit(
                         self.context.queue,
                         &[submit_info],
-                        v_fences_ref_wait_gpu[current_frame_index],
+                        v_fences_ref_wait_gpu[index_of_acquired_image],
                     )
                     .expect("Cannot submit queue");
 
