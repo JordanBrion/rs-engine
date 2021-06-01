@@ -144,7 +144,10 @@ impl MyRenderingContext {
 
         let mut v_extensions = Vec::new();
         v_extensions.push(ash::extensions::khr::Swapchain::name());
-        let v_extensions_c: Vec<*const i8> = v_extensions.into_iter().map(|e| e.as_ptr() as *const i8).collect();
+        let v_extensions_c: Vec<*const i8> = v_extensions
+            .into_iter()
+            .map(|e| e.as_ptr() as *const i8)
+            .collect();
         let device_create_info = ash::vk::DeviceCreateInfo {
             s_type: ash::vk::StructureType::DEVICE_CREATE_INFO,
             p_next: std::ptr::null(),

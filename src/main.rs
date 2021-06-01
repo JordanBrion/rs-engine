@@ -32,7 +32,12 @@ mod uniformbuffer;
 mod vertexbuffer;
 mod window;
 
+mod meshloader;
+
+use meshloader::*;
+
 fn main() {
+    let cube = read_mesh("resources/mesh/cube.obj");
     let renderer = MyLowLevelRendererBuilder::new().build();
     renderer.run();
 }
