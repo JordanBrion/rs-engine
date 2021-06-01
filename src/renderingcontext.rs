@@ -144,7 +144,7 @@ impl MyRenderingContext {
 
         let mut v_extensions = Vec::new();
         v_extensions.push(ash::extensions::khr::Swapchain::name());
-        let v_extensions_c = v_extensions.iter().map(|e| e.as_ptr() as *const i8);
+        let v_extensions_c: Vec<*const i8> = v_extensions.into_iter().map(|e| e.as_ptr() as *const i8).collect();
         let device_create_info = ash::vk::DeviceCreateInfo {
             s_type: ash::vk::StructureType::DEVICE_CREATE_INFO,
             p_next: std::ptr::null(),
@@ -154,7 +154,7 @@ impl MyRenderingContext {
             enabled_layer_count: 0,
             pp_enabled_layer_names: std::ptr::null(),
             enabled_extension_count: v_extensions_c.len() as u32,
-            pp_enabled_extension_names: v_extensions.as_ptr() as *const *const i8,
+            pp_enabled_extension_names: v_extensions_c.as_ptr() as *const *const i8,
             p_enabled_features: std::ptr::null(),
         };
         instance.create_device(*gpu, &device_create_info, None)
