@@ -8,6 +8,7 @@ pub type MyVec3 = [f32; 3];
 
 pub struct Mesh {
     pub vertices: Vec<MyVec3>,
+    pub indices: Vec<u16>,
 }
 
 pub fn read_mesh(fullpath: &str) -> Mesh {
@@ -15,5 +16,6 @@ pub fn read_mesh(fullpath: &str) -> Mesh {
     let model: Obj = load_obj(input).unwrap();
     Mesh {
         vertices: model.vertices.into_iter().map(|f| f.position).collect(),
+        indices: model.indices,
     }
 }
