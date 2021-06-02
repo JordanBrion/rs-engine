@@ -25,6 +25,7 @@ mod frame;
 mod lowlevelrenderer;
 mod mvp;
 mod renderingcontext;
+mod stagingbuffer;
 mod surface;
 mod swapchain;
 mod uniformbuffer;
