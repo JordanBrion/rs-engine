@@ -250,20 +250,13 @@ impl MyLowLevelRendererBuilder {
                 input_rate: ash::vk::VertexInputRate::VERTEX,
             };
 
-            let v_vertex_input_attribute_description = &[
-                ash::vk::VertexInputAttributeDescription {
+            let v_vertex_input_attribute_description =
+                &[ash::vk::VertexInputAttributeDescription {
                     location: 1,
                     binding: 0,
                     format: ash::vk::Format::R32G32B32_SFLOAT,
                     offset: 0,
-                },
-                ash::vk::VertexInputAttributeDescription {
-                    location: 2,
-                    binding: 0,
-                    format: ash::vk::Format::R32G32B32_SFLOAT,
-                    offset: std::mem::size_of::<glm::Vec3>() as u32,
-                },
-            ];
+                }];
 
             let vertex_input_state_create_info = ash::vk::PipelineVertexInputStateCreateInfo {
                 s_type: ash::vk::StructureType::PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
