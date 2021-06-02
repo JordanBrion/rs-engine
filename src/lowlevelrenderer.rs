@@ -23,6 +23,7 @@ pub struct MyLowLevelRenderer {
     surface: MySurface,
     swapchain: MySwapchain,
     vertex_buffer: MyVertexBuffer,
+    index_buffer: MyIndexBuffer,
     v_frames: Vec<MyFrame>,
 }
 
@@ -205,6 +206,7 @@ pub struct MyLowLevelRendererBuilder {
     descriptor_pool: ash::vk::DescriptorPool,
     descriptor_set_layout: ash::vk::DescriptorSetLayout,
     vertex_buffer: Option<MyVertexBuffer>,
+    index_buffer: Option<MyIndexBuffer>,
 }
 
 impl MyLowLevelRendererBuilder {
@@ -520,29 +522,32 @@ impl MyLowLevelRendererBuilder {
                 graphics_pipeline: graphics_pipeline,
                 descriptor_pool: descriptor_pool,
                 descriptor_set_layout: descriptor_set_layout,
-                vertex_buffer: Default::default(),
+                vertex_buffer: None,
+                index_buffer: None,
             }
         }
     }
 
-    pub fn vertex_buffer(mut self, mesh: &Mesh) -> MyLowLevelRendererBuilder {
+    pub fn mesh(mut self, mesh: &Mesh) -> MyLowLevelRendererBuilder {
         self.vertex_buffer = Some(MyVertexBuffer::new(&self.context, &mesh.vertices));
+        self.index_buffer = Some(MyIndexBuffer::new(&self.context, &mesh.indices));
         self
     }
 
     pub fn build(self) -> MyLowLevelRenderer {
         let v_frames = self.allocate_frames();
-        if let Some(vertex_buffer) = self.vertex_buffer {
+        if let (Some(vertex_buffer), Some(index_buffer)) = (self.vertex_buffer, self.index_buffer) {
             return MyLowLevelRenderer {
                 window: self.window,
                 context: self.context,
                 surface: self.surface,
                 swapchain: self.swapchain,
                 vertex_buffer: vertex_buffer,
+                index_buffer: index_buffer,
                 v_frames: v_frames,
             };
         } else {
-            panic!("You need a vertex buffer to build the renderer.");
+            panic!("You need a vertex buffer and an index buffer to build the renderer.");
         }
     }
 
@@ -564,6 +569,7 @@ impl MyLowLevelRendererBuilder {
                 &self.descriptor_set_layout,
                 MyUniformBuffer::new(&self.context, std::mem::size_of::<MyMvp>()),
                 self.vertex_buffer.as_ref().unwrap(),
+                self.index_buffer.as_ref().unwrap(),
             ));
         }
         v_frames

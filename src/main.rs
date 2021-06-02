@@ -38,8 +38,6 @@ use meshloader::*;
 
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
-    let renderer = MyLowLevelRendererBuilder::new()
-        .vertex_buffer(&cube)
-        .build();
+    let renderer = MyLowLevelRendererBuilder::new().mesh(&cube).build();
     renderer.run();
 }
