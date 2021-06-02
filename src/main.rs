@@ -14,7 +14,6 @@ use std::ffi::CString;
 
 use core::convert::Into;
 
-use crate::vertexbuffer::MyPointData;
 use crate::vertexbuffer::MyVertexBuffer;
 use ash::version::DeviceV1_0;
 use ash::version::EntryV1_0;
@@ -38,6 +37,8 @@ use meshloader::*;
 
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
-    let renderer = MyLowLevelRendererBuilder::new().build();
+    let renderer = MyLowLevelRendererBuilder::new()
+        .vertex_buffer(&cube)
+        .build();
     renderer.run();
 }

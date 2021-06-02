@@ -4,7 +4,7 @@ use obj::{load_obj, Obj};
 use std::fs::File;
 use std::io::BufReader;
 
-type MyVec3 = [f32; 3];
+pub type MyVec3 = [f32; 3];
 
 pub struct Mesh {
     pub vertices: Vec<MyVec3>,
