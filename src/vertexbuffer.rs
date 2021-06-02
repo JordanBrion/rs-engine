@@ -169,24 +169,26 @@ pub struct MyIndexBuffer {
 impl MyIndexBuffer {
     pub fn new(context: &MyRenderingContext, indices: &Vec<u16>) -> MyIndexBuffer {
         unsafe {
+            let staging_buffer = MyStagingBuffer::new(context, indices);
             let number_of_bytes: usize = indices.len() * std::mem::size_of_val(&indices[0]);
             let buffer_create_info = ash::vk::BufferCreateInfo {
                 s_type: ash::vk::StructureType::BUFFER_CREATE_INFO,
                 p_next: std::ptr::null(),
                 flags: Default::default(),
                 size: number_of_bytes as ash::vk::DeviceSize,
-                usage: ash::vk::BufferUsageFlags::INDEX_BUFFER,
+                usage: ash::vk::BufferUsageFlags::TRANSFER_DST
+                    | ash::vk::BufferUsageFlags::INDEX_BUFFER,
                 sharing_mode: ash::vk::SharingMode::EXCLUSIVE,
                 queue_family_index_count: 1,
                 p_queue_family_indices: context.index_of_queue_family as *const u32,
             };
-            let buffer = context
+            let index_buffer = context
                 .logical_device
                 .create_buffer(&buffer_create_info, None)
                 .unwrap();
             let memory_requirements = context
                 .logical_device
-                .get_buffer_memory_requirements(buffer);
+                .get_buffer_memory_requirements(index_buffer);
             let memory_allocate_info = ash::vk::MemoryAllocateInfo {
                 s_type: ash::vk::StructureType::MEMORY_ALLOCATE_INFO,
                 p_next: std::ptr::null(),
@@ -195,7 +197,7 @@ impl MyIndexBuffer {
                     &context.instance,
                     &context.gpu,
                     &memory_requirements,
-                    ash::vk::MemoryPropertyFlags::HOST_VISIBLE,
+                    ash::vk::MemoryPropertyFlags::DEVICE_LOCAL,
                 )
                 .unwrap() as u32,
             };
@@ -206,26 +208,19 @@ impl MyIndexBuffer {
                 .unwrap();
             context
                 .logical_device
-                .bind_buffer_memory(buffer, device_memory, offset as u64)
+                .bind_buffer_memory(index_buffer, device_memory, offset as u64)
                 .unwrap();
 
-            let p_data = context
-                .logical_device
-                .map_memory(
-                    device_memory,
-                    offset as u64,
-                    number_of_bytes as ash::vk::DeviceSize,
-                    Default::default(),
-                )
-                .expect("Cannot map memory");
-            std::ptr::copy_nonoverlapping(
-                indices.as_ptr() as *const std::ffi::c_void,
-                p_data,
+            MyVertexBuffer::copy_buffer(
+                context,
+                &staging_buffer.id,
+                &index_buffer,
+                offset,
                 number_of_bytes,
             );
-            context.logical_device.unmap_memory(device_memory);
+
             MyIndexBuffer {
-                id: buffer,
+                id: index_buffer,
                 offset: offset,
                 number_of_indices: indices.len(),
             }
