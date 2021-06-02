@@ -169,7 +169,6 @@ pub struct MyIndexBuffer {
 impl MyIndexBuffer {
     pub fn new(context: &MyRenderingContext, indices: &Vec<u16>) -> MyIndexBuffer {
         unsafe {
-            let offset = 0;
             let number_of_bytes: usize = indices.len() * std::mem::size_of_val(&indices[0]);
             let buffer_create_info = ash::vk::BufferCreateInfo {
                 s_type: ash::vk::StructureType::BUFFER_CREATE_INFO,
