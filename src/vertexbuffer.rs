@@ -4,12 +4,6 @@ use ash::version::DeviceV1_0;
 use ash::version::InstanceV1_0;
 use ash::vk::Handle;
 
-#[repr(C)]
-pub struct MyPointData {
-    pub position: glm::Vec3,
-    pub color: glm::Vec3,
-}
-
 pub struct MyVertexBuffer {
     pub id: ash::vk::Buffer,
     pub offset: usize,
@@ -17,10 +11,10 @@ pub struct MyVertexBuffer {
 }
 
 impl MyVertexBuffer {
-    pub fn new(context: &MyRenderingContext, content: Vec<MyPointData>) -> MyVertexBuffer {
+    pub fn new<T>(context: &MyRenderingContext, content: &Vec<T>) -> MyVertexBuffer {
         unsafe {
             let number_of_vertices = content.len();
-            let bytes_count = number_of_vertices * std::mem::size_of::<MyPointData>();
+            let bytes_count = number_of_vertices * std::mem::size_of::<T>();
             // STAGING BUFFER CREATION
             let staging_buffer_create_info = ash::vk::BufferCreateInfo {
                 s_type: ash::vk::StructureType::BUFFER_CREATE_INFO,
