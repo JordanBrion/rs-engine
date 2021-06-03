@@ -31,6 +31,7 @@ mod swapchain;
 mod uniformbuffer;
 mod vertexbuffer;
 mod window;
+mod entity;
 
 mod meshloader;
 
