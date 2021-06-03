@@ -37,7 +37,7 @@ mod meshloader;
 
 use gameentity::MyGameEntity;
 use meshloader::*;
-mod gameentityid;
+mod id;
 
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");

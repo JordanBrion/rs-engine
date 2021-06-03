@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 static GLOBAL_ID: AtomicUsize = AtomicUsize::new(0);
 
-pub struct MyGameEntityId {
+pub struct MyId {
     id: usize,
 }
 
-impl MyGameEntityId {
-    pub fn new() -> MyGameEntityId {
-        MyGameEntityId {
+impl MyId {
+    pub fn new() -> MyId {
+        MyId {
             id: Self::make_new_id(),
         }
     }

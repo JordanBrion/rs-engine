@@ -1,8 +1,8 @@
-use crate::gameentityid::MyGameEntityId;
+use crate::id::MyId;
 use crate::meshloader::Mesh;
 
 pub struct MyGameEntity<'a> {
-    id: MyGameEntityId,
+    id: MyId,
     mesh: &'a Mesh,
     orientation: glm::Mat4,
 }
@@ -10,7 +10,7 @@ pub struct MyGameEntity<'a> {
 impl<'a> MyGameEntity<'a> {
     pub fn new(mesh: &'a Mesh) -> MyGameEntity {
         MyGameEntity {
-            id: MyGameEntityId::new(),
+            id: MyId::new(),
             mesh: mesh,
             orientation: glm::identity(),
         }
