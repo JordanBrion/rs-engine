@@ -2,5 +2,6 @@ struct MyGameEntityId {
     id: usize,
 }
 pub struct MyGameEntity {
-    id: MyGameEntityId
+    id: MyGameEntityId,
+    orientation: glm::Mat4,
 }
