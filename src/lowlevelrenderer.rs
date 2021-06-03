@@ -1,4 +1,5 @@
 use crate::frame::*;
+use crate::meshloader::*;
 use crate::mvp::*;
 use crate::renderingcontext::*;
 use crate::surface::*;
@@ -22,6 +23,7 @@ pub struct MyLowLevelRenderer {
     surface: MySurface,
     swapchain: MySwapchain,
     vertex_buffer: MyVertexBuffer,
+    index_buffer: MyIndexBuffer,
     v_frames: Vec<MyFrame>,
 }
 
@@ -203,7 +205,8 @@ pub struct MyLowLevelRendererBuilder {
     graphics_pipeline: ash::vk::Pipeline,
     descriptor_pool: ash::vk::DescriptorPool,
     descriptor_set_layout: ash::vk::DescriptorSetLayout,
-    vertex_buffer: MyVertexBuffer,
+    vertex_buffer: Option<MyVertexBuffer>,
+    index_buffer: Option<MyIndexBuffer>,
 }
 
 impl MyLowLevelRendererBuilder {
@@ -245,24 +248,17 @@ impl MyLowLevelRendererBuilder {
 
             let vertex_input_binding_description = ash::vk::VertexInputBindingDescription {
                 binding: 0,
-                stride: std::mem::size_of::<MyPointData>() as u32,
+                stride: std::mem::size_of::<MyVec3>() as u32,
                 input_rate: ash::vk::VertexInputRate::VERTEX,
             };
 
-            let v_vertex_input_attribute_description = &[
-                ash::vk::VertexInputAttributeDescription {
+            let v_vertex_input_attribute_description =
+                &[ash::vk::VertexInputAttributeDescription {
                     location: 1,
                     binding: 0,
                     format: ash::vk::Format::R32G32B32_SFLOAT,
                     offset: 0,
-                },
-                ash::vk::VertexInputAttributeDescription {
-                    location: 2,
-                    binding: 0,
-                    format: ash::vk::Format::R32G32B32_SFLOAT,
-                    offset: std::mem::size_of::<glm::Vec3>() as u32,
-                },
-            ];
+                }];
 
             let vertex_input_state_create_info = ash::vk::PipelineVertexInputStateCreateInfo {
                 s_type: ash::vk::StructureType::PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -516,22 +512,6 @@ impl MyLowLevelRendererBuilder {
                 .create_descriptor_pool(&descriptor_pool_create_info, None)
                 .expect("Cannot create descriptor pool");
 
-            let vertex_buffer_content = vec![
-                MyPointData {
-                    position: glm::vec3(0f32, 0.5f32, 0f32),
-                    color: glm::vec3(1.0f32, 0.0f32, 0.0f32),
-                },
-                MyPointData {
-                    position: glm::vec3(0.5f32, -0.5f32, 0f32),
-                    color: glm::vec3(0f32, 1.0f32, 0f32),
-                },
-                MyPointData {
-                    position: glm::vec3(-0.5f32, -0.5f32, 0f32),
-                    color: glm::vec3(0f32, 0f32, 1.0f32),
-                },
-            ];
-
-            let vertex_buffer = MyVertexBuffer::new(&context, vertex_buffer_content);
             MyLowLevelRendererBuilder {
                 window: window,
                 context: context,
@@ -542,26 +522,39 @@ impl MyLowLevelRendererBuilder {
                 graphics_pipeline: graphics_pipeline,
                 descriptor_pool: descriptor_pool,
                 descriptor_set_layout: descriptor_set_layout,
-                vertex_buffer: vertex_buffer,
+                vertex_buffer: None,
+                index_buffer: None,
             }
         }
     }
 
+    pub fn mesh(mut self, mesh: &Mesh) -> MyLowLevelRendererBuilder {
+        self.vertex_buffer = Some(MyVertexBuffer::new(&self.context, &mesh.vertices));
+        self.index_buffer = Some(MyIndexBuffer::new(&self.context, &mesh.indices));
+        self
+    }
+
     pub fn build(self) -> MyLowLevelRenderer {
         let v_frames = self.allocate_frames();
-        MyLowLevelRenderer {
-            window: self.window,
-            context: self.context,
-            surface: self.surface,
-            swapchain: self.swapchain,
-            vertex_buffer: self.vertex_buffer,
-            v_frames: v_frames,
+        if let (Some(vertex_buffer), Some(index_buffer)) = (self.vertex_buffer, self.index_buffer) {
+            return MyLowLevelRenderer {
+                window: self.window,
+                context: self.context,
+                surface: self.surface,
+                swapchain: self.swapchain,
+                vertex_buffer: vertex_buffer,
+                index_buffer: index_buffer,
+                v_frames: v_frames,
+            };
+        } else {
+            panic!("You need a vertex buffer and an index buffer to build the renderer.");
         }
     }
 
     fn allocate_frames(&self) -> Vec<MyFrame> {
         let count = self.swapchain.size();
         let mut v_frames = Vec::with_capacity(count);
+
         for i in 0..count {
             v_frames.push(MyFrame::new(
                 &self.context,
@@ -575,7 +568,8 @@ impl MyLowLevelRendererBuilder {
                 &self.descriptor_pool,
                 &self.descriptor_set_layout,
                 MyUniformBuffer::new(&self.context, std::mem::size_of::<MyMvp>()),
-                &self.vertex_buffer,
+                self.vertex_buffer.as_ref().unwrap(),
+                self.index_buffer.as_ref().unwrap(),
             ));
         }
         v_frames

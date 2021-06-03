@@ -4,6 +4,7 @@ use crate::renderingcontext::*;
 use crate::surface::MySurface;
 use crate::swapchain::MySwapchain;
 use crate::uniformbuffer::*;
+use crate::vertexbuffer::MyIndexBuffer;
 use crate::vertexbuffer::MyVertexBuffer;
 use crate::window::*;
 use ash::version::DeviceV1_0;
@@ -27,6 +28,7 @@ impl MyFrame {
         descriptor_set_layout: &ash::vk::DescriptorSetLayout,
         uniform_buffer: MyUniformBuffer,
         vertex_buffer: &MyVertexBuffer,
+        index_buffer: &MyIndexBuffer,
     ) -> MyFrame {
         unsafe {
             let uniform_buffer_binding_number = 5; // TODO make dynamic
@@ -175,11 +177,18 @@ impl MyFrame {
                 &[vertex_buffer.id],
                 &[vertex_buffer.offset as u64],
             );
-            context.logical_device.cmd_draw(
+            context.logical_device.cmd_bind_index_buffer(
                 command_buffer,
-                vertex_buffer.number_of_vertices as u32,
+                index_buffer.id,
+                index_buffer.offset as u64,
+                ash::vk::IndexType::UINT16,
+            );
+            context.logical_device.cmd_draw_indexed(
+                command_buffer,
+                index_buffer.number_of_indices as u32,
                 1,
                 0,
+                index_buffer.offset as i32,
                 0,
             );
             context.logical_device.cmd_end_render_pass(command_buffer);
