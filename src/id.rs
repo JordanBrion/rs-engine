@@ -20,3 +20,9 @@ impl MyId {
         previous_id + 1
     }
 }
+
+impl Default for MyId {
+    fn default() -> MyId {
+        MyId::new()
+    }
+}
