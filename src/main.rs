@@ -22,6 +22,7 @@ use ash::vk::Handle;
 
 mod devicememory;
 mod frame;
+mod gameentity;
 mod lowlevelrenderer;
 mod mvp;
 mod renderingcontext;
@@ -31,14 +32,16 @@ mod swapchain;
 mod uniformbuffer;
 mod vertexbuffer;
 mod window;
-mod entity;
 
 mod meshloader;
 
+use gameentity::MyGameEntity;
 use meshloader::*;
+mod gameentityid;
 
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
+    let entity = MyGameEntity::new(&cube);
     let renderer = MyLowLevelRendererBuilder::new().mesh(&cube).build();
     renderer.run();
 }
