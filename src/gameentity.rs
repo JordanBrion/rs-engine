@@ -4,7 +4,7 @@ use crate::meshloader::Mesh;
 pub struct MyGameEntity<'a> {
     id: MyId,
     mesh: &'a Mesh,
-    orientation: glm::Mat4,
+    pub orientation: glm::Mat4,
 }
 
 impl<'a> MyGameEntity<'a> {

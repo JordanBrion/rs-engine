@@ -42,6 +42,9 @@ mod id;
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
     let entity = MyGameEntity::new(&cube);
-    let renderer = MyLowLevelRendererBuilder::new().mesh(&cube).build();
+    let renderer = MyLowLevelRendererBuilder::new()
+        .mesh(&cube)
+        .uniform_buffer(&entity.orientation)
+        .build();
     renderer.run();
 }

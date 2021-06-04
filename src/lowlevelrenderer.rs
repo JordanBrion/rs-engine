@@ -205,6 +205,7 @@ pub struct MyLowLevelRendererBuilder {
     graphics_pipeline: ash::vk::Pipeline,
     descriptor_pool: ash::vk::DescriptorPool,
     descriptor_set_layout: ash::vk::DescriptorSetLayout,
+    uniform_buffer_bytes_count: Option<usize>,
     vertex_buffer: Option<MyVertexBuffer>,
     index_buffer: Option<MyIndexBuffer>,
 }
@@ -522,6 +523,7 @@ impl MyLowLevelRendererBuilder {
                 graphics_pipeline: graphics_pipeline,
                 descriptor_pool: descriptor_pool,
                 descriptor_set_layout: descriptor_set_layout,
+                uniform_buffer_bytes_count: None,
                 vertex_buffer: None,
                 index_buffer: None,
             }
@@ -531,6 +533,11 @@ impl MyLowLevelRendererBuilder {
     pub fn mesh(mut self, mesh: &Mesh) -> MyLowLevelRendererBuilder {
         self.vertex_buffer = Some(MyVertexBuffer::new(&self.context, &mesh.vertices));
         self.index_buffer = Some(MyIndexBuffer::new(&self.context, &mesh.indices));
+        self
+    }
+
+    pub fn uniform_buffer<T>(mut self, content: &T) -> MyLowLevelRendererBuilder {
+        self.uniform_buffer_bytes_count = Some(std::mem::size_of::<T>());
         self
     }
 
@@ -547,7 +554,7 @@ impl MyLowLevelRendererBuilder {
                 v_frames: v_frames,
             };
         } else {
-            panic!("You need a vertex buffer and an index buffer to build the renderer.");
+            panic!("You need a vertex buffer, index buffer to build the renderer.");
         }
     }
 
@@ -567,7 +574,7 @@ impl MyLowLevelRendererBuilder {
                 &self.graphics_pipeline,
                 &self.descriptor_pool,
                 &self.descriptor_set_layout,
-                MyUniformBuffer::new(&self.context, std::mem::size_of::<MyMvp>()),
+                MyUniformBuffer::new(&self.context, self.uniform_buffer_bytes_count.unwrap()),
                 self.vertex_buffer.as_ref().unwrap(),
                 self.index_buffer.as_ref().unwrap(),
             ));
