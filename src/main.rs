@@ -20,10 +20,13 @@ use ash::version::EntryV1_0;
 use ash::version::InstanceV1_0;
 use ash::vk::Handle;
 
+mod camera;
 mod devicememory;
 mod frame;
 mod gameentity;
+mod id;
 mod lowlevelrenderer;
+mod meshloader;
 mod mvp;
 mod renderingcontext;
 mod stagingbuffer;
@@ -33,14 +36,13 @@ mod uniformbuffer;
 mod vertexbuffer;
 mod window;
 
-mod meshloader;
-
+use camera::MyCamera;
 use gameentity::MyGameEntity;
 use meshloader::*;
-mod id;
 
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
+    let camera = MyCamera::new();
     let entity = MyGameEntity::new(&cube);
     let renderer = MyLowLevelRendererBuilder::new()
         .mesh(&cube)
