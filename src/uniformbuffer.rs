@@ -1,5 +1,5 @@
 use crate::devicememory::search_physical_device_memory_type;
-use crate::{mvp::MyMvp, renderingcontext::*};
+use crate::renderingcontext::*;
 use ash::version::DeviceV1_0;
 
 pub struct MyUniformBuffer {
@@ -56,20 +56,20 @@ impl MyUniformBuffer {
         }
     }
 
-    pub unsafe fn update(&self, logical_device: &ash::Device, matrices: &mut MyMvp) {
-        matrices.m_model = glm::rotate(&matrices.m_model, 0.01, &glm::vec3(0.0, 1.0, 0.0));
+    pub unsafe fn update<T>(&self, logical_device: &ash::Device, content: &T) {
+        let bytes_count = std::mem::size_of::<T>();
         let p_data = logical_device
             .map_memory(
                 self.device_memory,
                 0,
-                std::mem::size_of::<MyMvp>() as ash::vk::DeviceSize,
+                bytes_count as ash::vk::DeviceSize,
                 Default::default(),
             )
             .expect("Cannot map device memory");
         std::ptr::copy_nonoverlapping(
-            matrices as *const MyMvp as *const std::ffi::c_void,
+            content as *const T as *const std::ffi::c_void,
             p_data,
-            std::mem::size_of::<MyMvp>(),
+            bytes_count,
         );
         logical_device.unmap_memory(self.device_memory);
     }
