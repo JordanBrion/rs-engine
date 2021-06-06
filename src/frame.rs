@@ -1,5 +1,6 @@
 use std::ops::Index;
 
+use crate::id::MyId;
 use crate::renderingcontext::*;
 use crate::surface::MySurface;
 use crate::swapchain::MySwapchain;
@@ -26,11 +27,12 @@ impl MyFrame {
         graphics_pipeline: &ash::vk::Pipeline,
         descriptor_pool: &ash::vk::DescriptorPool,
         descriptor_set_layout: &ash::vk::DescriptorSetLayout,
-        uniform_buffer: MyUniformBuffer,
+        ub_infos: (MyId, usize),
         vertex_buffer: &MyVertexBuffer,
         index_buffer: &MyIndexBuffer,
     ) -> MyFrame {
         unsafe {
+            let uniform_buffer = MyUniformBuffer::new(context, ub_infos.1);
             let uniform_buffer_binding_number = 5; // TODO make dynamic
             let v_descriptor_set_layout = vec![*descriptor_set_layout; 1];
             let descriptor_set_allocate_info = ash::vk::DescriptorSetAllocateInfo {
@@ -201,5 +203,9 @@ impl MyFrame {
                 command_buffer: command_buffer,
             }
         }
+    }
+
+    pub unsafe fn update_uniform_buffer<T>(&mut self, logical_device: &ash::Device, content: &T) {
+        self.uniform_buffer.update(logical_device, content);
     }
 }

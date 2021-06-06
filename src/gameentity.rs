@@ -2,7 +2,7 @@ use crate::id::MyId;
 use crate::meshloader::Mesh;
 
 pub struct MyGameEntity<'a> {
-    id: MyId,
+    pub id: MyId,
     mesh: &'a Mesh,
     pub orientation: glm::Mat4,
 }

@@ -1,4 +1,6 @@
 use crate::frame::*;
+use crate::gameentity::MyGameEntity;
+use crate::id::MyId;
 use crate::meshloader::*;
 use crate::mvp::*;
 use crate::renderingcontext::*;
@@ -26,6 +28,7 @@ pub struct MyLowLevelRenderer {
     index_buffer: MyIndexBuffer,
     v_frames: Vec<MyFrame>,
     current_frame_index: usize,
+    index_of_acquired_image: usize,
     v_fences_wait_gpu: [ash::vk::Fence; 2],
     v_fences_ref_wait_gpu: Vec<ash::vk::Fence>,
     v_semaphores_acquired_image: Vec<ash::vk::Semaphore>,
@@ -33,6 +36,29 @@ pub struct MyLowLevelRenderer {
 }
 
 impl MyLowLevelRenderer {
+    pub fn update(&mut self, entity: &MyGameEntity) {
+        unsafe {
+            self.v_frames[self.index_of_acquired_image]
+                .update_uniform_buffer(&self.context.logical_device, &entity.orientation);
+        }
+    }
+
+    pub fn acquire_image(&mut self) {
+        unsafe {
+            let infos_of_acquired_image = self
+                .swapchain
+                .loader
+                .acquire_next_image(
+                    self.swapchain.inner,
+                    !(0 as u64),
+                    self.v_semaphores_acquired_image[self.current_frame_index],
+                    ash::vk::Fence::null(),
+                )
+                .expect("Cannot acquire next image");
+            self.index_of_acquired_image = infos_of_acquired_image.0 as usize;
+        }
+    }
+
     pub fn run(&mut self) {
         unsafe {
             self.context
@@ -44,39 +70,26 @@ impl MyLowLevelRenderer {
                 )
                 .expect("Cannot wait for fences");
 
-            let infos_of_acquired_image = self
-                .swapchain
-                .loader
-                .acquire_next_image(
-                    self.swapchain.inner,
-                    !(0 as u64),
-                    self.v_semaphores_acquired_image[self.current_frame_index],
-                    ash::vk::Fence::null(),
-                )
-                .expect("Cannot acquire next image");
-
-            let index_of_acquired_image = infos_of_acquired_image.0 as usize;
-
-            if self.v_fences_ref_wait_gpu[index_of_acquired_image] != ash::vk::Fence::null() {
+            if self.v_fences_ref_wait_gpu[self.index_of_acquired_image] != ash::vk::Fence::null() {
                 self.context
                     .logical_device
                     .wait_for_fences(
-                        &[self.v_fences_ref_wait_gpu[index_of_acquired_image]],
+                        &[self.v_fences_ref_wait_gpu[self.index_of_acquired_image]],
                         true,
                         !(0 as u64),
                     )
                     .expect("Cannot wait for fences");
             }
 
-            self.v_fences_ref_wait_gpu[index_of_acquired_image] =
+            self.v_fences_ref_wait_gpu[self.index_of_acquired_image] =
                 self.v_fences_wait_gpu[self.current_frame_index];
 
             self.context
                 .logical_device
-                .reset_fences(&[self.v_fences_ref_wait_gpu[index_of_acquired_image]])
+                .reset_fences(&[self.v_fences_ref_wait_gpu[self.index_of_acquired_image]])
                 .expect("Cannot reset fences");
 
-            let current_frame = self.v_frames.index(index_of_acquired_image);
+            let current_frame = self.v_frames.index(self.index_of_acquired_image);
 
             let wait_stage_submit_info = ash::vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
             let submit_info = ash::vk::SubmitInfo {
@@ -96,7 +109,7 @@ impl MyLowLevelRenderer {
                 .queue_submit(
                     self.context.queue,
                     &[submit_info],
-                    self.v_fences_ref_wait_gpu[index_of_acquired_image],
+                    self.v_fences_ref_wait_gpu[self.index_of_acquired_image],
                 )
                 .expect("Cannot submit queue");
 
@@ -107,7 +120,7 @@ impl MyLowLevelRenderer {
                 p_wait_semaphores: &self.v_semaphores_pipeline_done[self.current_frame_index],
                 swapchain_count: 1,
                 p_swapchains: &self.swapchain.inner,
-                p_image_indices: &infos_of_acquired_image.0,
+                p_image_indices: &(self.index_of_acquired_image as u32),
                 p_results: std::ptr::null_mut(),
             };
             self.swapchain
@@ -129,7 +142,7 @@ pub struct MyLowLevelRendererBuilder {
     graphics_pipeline: ash::vk::Pipeline,
     descriptor_pool: ash::vk::DescriptorPool,
     descriptor_set_layout: ash::vk::DescriptorSetLayout,
-    uniform_buffer_bytes_count: Option<usize>,
+    uniform_buffer_allocation_infos: Option<(MyId, usize)>,
     vertex_buffer: Option<MyVertexBuffer>,
     index_buffer: Option<MyIndexBuffer>,
 }
@@ -447,7 +460,7 @@ impl MyLowLevelRendererBuilder {
                 graphics_pipeline: graphics_pipeline,
                 descriptor_pool: descriptor_pool,
                 descriptor_set_layout: descriptor_set_layout,
-                uniform_buffer_bytes_count: None,
+                uniform_buffer_allocation_infos: None,
                 vertex_buffer: None,
                 index_buffer: None,
             }
@@ -460,8 +473,8 @@ impl MyLowLevelRendererBuilder {
         self
     }
 
-    pub fn uniform_buffer<T>(mut self, content: &T) -> MyLowLevelRendererBuilder {
-        self.uniform_buffer_bytes_count = Some(std::mem::size_of::<T>());
+    pub fn uniform_buffer<T>(mut self, id: &MyId, content: &T) -> MyLowLevelRendererBuilder {
+        self.uniform_buffer_allocation_infos = Some((id.clone(), std::mem::size_of::<T>()));
         self
     }
 
@@ -526,6 +539,7 @@ impl MyLowLevelRendererBuilder {
                     index_buffer: index_buffer,
                     v_frames: v_frames,
                     current_frame_index: 0,
+                    index_of_acquired_image: 0,
                     v_fences_wait_gpu: v_fences_wait_gpu,
                     v_fences_ref_wait_gpu: v_fences_ref_wait_gpu,
                     v_semaphores_acquired_image: v_semaphores_acquired_image,
@@ -540,7 +554,7 @@ impl MyLowLevelRendererBuilder {
     fn allocate_frames(&self) -> Vec<MyFrame> {
         let count = self.swapchain.size();
         let mut v_frames = Vec::with_capacity(count);
-
+        let ub_infos = self.uniform_buffer_allocation_infos.as_ref().unwrap();
         for i in 0..count {
             v_frames.push(MyFrame::new(
                 &self.context,
@@ -553,7 +567,7 @@ impl MyLowLevelRendererBuilder {
                 &self.graphics_pipeline,
                 &self.descriptor_pool,
                 &self.descriptor_set_layout,
-                MyUniformBuffer::new(&self.context, self.uniform_buffer_bytes_count.unwrap()),
+                ub_infos.clone(),
                 self.vertex_buffer.as_ref().unwrap(),
                 self.index_buffer.as_ref().unwrap(),
             ));

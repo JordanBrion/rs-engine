@@ -5,6 +5,7 @@ extern crate num;
 extern crate sdl2;
 
 use lowlevelrenderer::MyLowLevelRendererBuilder;
+use mvp::MyMvp;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -57,10 +58,10 @@ fn handle_events(event_pump: &mut sdl2::EventPump) -> bool {
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
     let camera = MyCamera::new();
-    let entity = MyGameEntity::new(&cube);
+    let mut entity = MyGameEntity::new(&cube);
     let mut renderer = MyLowLevelRendererBuilder::new()
         .mesh(&cube)
-        .uniform_buffer(&entity.orientation)
+        .uniform_buffer(&entity.id, &entity.orientation)
         .build();
 
     let mut event_pump = renderer
@@ -70,7 +71,21 @@ fn main() {
         .expect("Cannot get sdl event pump");
     let mut go = true;
 
+    let mut matrices = MyMvp {
+        m_model: glm::identity(),
+        m_view: glm::look_at(
+            &glm::vec3(0.0, 0.0, 4.0),
+            &glm::vec3(0.0, 0.0, 0.0),
+            &glm::vec3(0.0, 1.0, 0.0),
+        ),
+        m_projection: glm::perspective(16.0f32 / 9.0f32, 45.0f32, 1.0f32, 100.0f32),
+    };
+
     while go {
+        matrices.m_model = glm::rotate(&matrices.m_model, 0.01, &glm::vec3(0.0, 1.0, 0.0));
+        entity.orientation = matrices.m_projection * matrices.m_view * matrices.m_model;
+        renderer.acquire_image();
+        renderer.update(&entity);
         renderer.run();
         go = handle_events(&mut event_pump);
     }
