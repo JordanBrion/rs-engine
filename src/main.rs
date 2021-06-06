@@ -40,13 +40,38 @@ use camera::MyCamera;
 use gameentity::MyGameEntity;
 use meshloader::*;
 
+fn handle_events(event_pump: &mut sdl2::EventPump) -> bool {
+    for event in event_pump.poll_iter() {
+        match event {
+            Event::Quit { .. }
+            | Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+            } => return false,
+            _ => return true,
+        }
+    }
+    true
+}
+
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
     let camera = MyCamera::new();
     let entity = MyGameEntity::new(&cube);
-    let renderer = MyLowLevelRendererBuilder::new()
+    let mut renderer = MyLowLevelRendererBuilder::new()
         .mesh(&cube)
         .uniform_buffer(&entity.orientation)
         .build();
-    renderer.run();
+
+    let mut event_pump = renderer
+        .window
+        .sdl_context
+        .event_pump()
+        .expect("Cannot get sdl event pump");
+    let mut go = true;
+
+    while go {
+        renderer.run();
+        go = handle_events(&mut event_pump);
+    }
 }

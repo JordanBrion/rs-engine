@@ -18,181 +18,105 @@ use std::time::Duration;
 const FRAME_COUNT: usize = 2;
 
 pub struct MyLowLevelRenderer {
-    window: MyWindow,
+    pub window: MyWindow,
     context: MyRenderingContext,
     surface: MySurface,
     swapchain: MySwapchain,
     vertex_buffer: MyVertexBuffer,
     index_buffer: MyIndexBuffer,
     v_frames: Vec<MyFrame>,
+    current_frame_index: usize,
+    v_fences_wait_gpu: [ash::vk::Fence; 2],
+    v_fences_ref_wait_gpu: Vec<ash::vk::Fence>,
+    v_semaphores_acquired_image: Vec<ash::vk::Semaphore>,
+    v_semaphores_pipeline_done: Vec<ash::vk::Semaphore>,
 }
 
 impl MyLowLevelRenderer {
-    pub fn run(&self) {
+    pub fn run(&mut self) {
         unsafe {
-            let fence_create_info = ash::vk::FenceCreateInfo {
-                s_type: ash::vk::StructureType::FENCE_CREATE_INFO,
-                p_next: std::ptr::null(),
-                flags: ash::vk::FenceCreateFlags::SIGNALED,
-            };
+            self.context
+                .logical_device
+                .wait_for_fences(
+                    &[self.v_fences_wait_gpu[self.current_frame_index]],
+                    true,
+                    !(0 as u64),
+                )
+                .expect("Cannot wait for fences");
 
-            let semaphore_acquired_image_create_info = ash::vk::SemaphoreCreateInfo {
-                s_type: ash::vk::StructureType::SEMAPHORE_CREATE_INFO,
-                p_next: std::ptr::null(),
-                flags: Default::default(),
-            };
+            let infos_of_acquired_image = self
+                .swapchain
+                .loader
+                .acquire_next_image(
+                    self.swapchain.inner,
+                    !(0 as u64),
+                    self.v_semaphores_acquired_image[self.current_frame_index],
+                    ash::vk::Fence::null(),
+                )
+                .expect("Cannot acquire next image");
 
-            let semaphore_pipeline_done_create_info = ash::vk::SemaphoreCreateInfo {
-                s_type: ash::vk::StructureType::SEMAPHORE_CREATE_INFO,
-                p_next: std::ptr::null(),
-                flags: Default::default(),
-            };
+            let index_of_acquired_image = infos_of_acquired_image.0 as usize;
 
-            let v_fences_wait_gpu = [
+            if self.v_fences_ref_wait_gpu[index_of_acquired_image] != ash::vk::Fence::null() {
                 self.context
                     .logical_device
-                    .create_fence(&fence_create_info, None)
-                    .expect("Cannot create fence"),
-                self.context
-                    .logical_device
-                    .create_fence(&fence_create_info, None)
-                    .expect("Cannot create fence"),
-            ];
-            let mut v_fences_ref_wait_gpu = vec![ash::vk::Fence::null(); self.swapchain.size()];
-            let mut v_semaphores_acquired_image = Vec::with_capacity(FRAME_COUNT);
-            let mut v_semaphores_pipeline_done = Vec::with_capacity(FRAME_COUNT);
-
-            for _ in 0..FRAME_COUNT {
-                v_semaphores_acquired_image.push(
-                    self.context
-                        .logical_device
-                        .create_semaphore(&semaphore_acquired_image_create_info, None)
-                        .expect("Cannot create sempahore"),
-                );
-                v_semaphores_pipeline_done.push(
-                    self.context
-                        .logical_device
-                        .create_semaphore(&semaphore_pipeline_done_create_info, None)
-                        .expect("Cannot create sempahore"),
-                );
-            }
-
-            let mut event_pump = self
-                .window
-                .sdl_context
-                .event_pump()
-                .expect("Cannot get sdl event pump");
-            let mut go = true;
-            let mut current_frame_index = 0;
-            let mut matrices = MyMvp {
-                m_model: glm::identity(),
-                m_view: glm::look_at(
-                    &glm::vec3(0.0, 0.0, 4.0),
-                    &glm::vec3(0.0, 0.0, 0.0),
-                    &glm::vec3(0.0, 1.0, 0.0),
-                ),
-                m_projection: glm::perspective(16.0f32 / 9.0f32, 45.0f32, 1.0f32, 100.0f32),
-            };
-
-            while go {
-                go = Self::handle_events(&mut event_pump);
-
-                self.context
-                    .logical_device
-                    .wait_for_fences(&[v_fences_wait_gpu[current_frame_index]], true, !(0 as u64))
-                    .expect("Cannot wait for fences");
-
-                let infos_of_acquired_image = self
-                    .swapchain
-                    .loader
-                    .acquire_next_image(
-                        self.swapchain.inner,
+                    .wait_for_fences(
+                        &[self.v_fences_ref_wait_gpu[index_of_acquired_image]],
+                        true,
                         !(0 as u64),
-                        v_semaphores_acquired_image[current_frame_index],
-                        ash::vk::Fence::null(),
                     )
-                    .expect("Cannot acquire next image");
-
-                let index_of_acquired_image = infos_of_acquired_image.0 as usize;
-
-                if v_fences_ref_wait_gpu[index_of_acquired_image] != ash::vk::Fence::null() {
-                    self.context
-                        .logical_device
-                        .wait_for_fences(
-                            &[v_fences_ref_wait_gpu[index_of_acquired_image]],
-                            true,
-                            !(0 as u64),
-                        )
-                        .expect("Cannot wait for fences");
-                }
-
-                v_fences_ref_wait_gpu[index_of_acquired_image] =
-                    v_fences_wait_gpu[current_frame_index];
-
-                self.context
-                    .logical_device
-                    .reset_fences(&[v_fences_ref_wait_gpu[index_of_acquired_image]])
-                    .expect("Cannot reset fences");
-
-                let current_frame = self.v_frames.index(index_of_acquired_image);
-                current_frame
-                    .uniform_buffer
-                    .update(&self.context.logical_device, &mut matrices);
-
-                let wait_stage_submit_info = ash::vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
-                let submit_info = ash::vk::SubmitInfo {
-                    s_type: ash::vk::StructureType::SUBMIT_INFO,
-                    p_next: std::ptr::null(),
-                    wait_semaphore_count: 1,
-                    p_wait_semaphores: &v_semaphores_acquired_image[current_frame_index],
-                    p_wait_dst_stage_mask: &wait_stage_submit_info
-                        as *const ash::vk::PipelineStageFlags,
-                    command_buffer_count: 1,
-                    p_command_buffers: &current_frame.command_buffer,
-                    signal_semaphore_count: 1,
-                    p_signal_semaphores: &v_semaphores_pipeline_done[current_frame_index],
-                };
-                self.context
-                    .logical_device
-                    .queue_submit(
-                        self.context.queue,
-                        &[submit_info],
-                        v_fences_ref_wait_gpu[index_of_acquired_image],
-                    )
-                    .expect("Cannot submit queue");
-
-                let present_info = ash::vk::PresentInfoKHR {
-                    s_type: ash::vk::StructureType::PRESENT_INFO_KHR,
-                    p_next: std::ptr::null(),
-                    wait_semaphore_count: 1,
-                    p_wait_semaphores: &v_semaphores_pipeline_done[current_frame_index],
-                    swapchain_count: 1,
-                    p_swapchains: &self.swapchain.inner,
-                    p_image_indices: &infos_of_acquired_image.0,
-                    p_results: std::ptr::null_mut(),
-                };
-                self.swapchain
-                    .loader
-                    .queue_present(self.context.queue, &present_info)
-                    .expect("Cannot present image");
-
-                current_frame_index = (current_frame_index + 1) % FRAME_COUNT;
+                    .expect("Cannot wait for fences");
             }
-        }
-    }
 
-    fn handle_events(event_pump: &mut sdl2::EventPump) -> bool {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => return false,
-                _ => return true,
-            }
+            self.v_fences_ref_wait_gpu[index_of_acquired_image] =
+                self.v_fences_wait_gpu[self.current_frame_index];
+
+            self.context
+                .logical_device
+                .reset_fences(&[self.v_fences_ref_wait_gpu[index_of_acquired_image]])
+                .expect("Cannot reset fences");
+
+            let current_frame = self.v_frames.index(index_of_acquired_image);
+
+            let wait_stage_submit_info = ash::vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
+            let submit_info = ash::vk::SubmitInfo {
+                s_type: ash::vk::StructureType::SUBMIT_INFO,
+                p_next: std::ptr::null(),
+                wait_semaphore_count: 1,
+                p_wait_semaphores: &self.v_semaphores_acquired_image[self.current_frame_index],
+                p_wait_dst_stage_mask: &wait_stage_submit_info
+                    as *const ash::vk::PipelineStageFlags,
+                command_buffer_count: 1,
+                p_command_buffers: &current_frame.command_buffer,
+                signal_semaphore_count: 1,
+                p_signal_semaphores: &self.v_semaphores_pipeline_done[self.current_frame_index],
+            };
+            self.context
+                .logical_device
+                .queue_submit(
+                    self.context.queue,
+                    &[submit_info],
+                    self.v_fences_ref_wait_gpu[index_of_acquired_image],
+                )
+                .expect("Cannot submit queue");
+
+            let present_info = ash::vk::PresentInfoKHR {
+                s_type: ash::vk::StructureType::PRESENT_INFO_KHR,
+                p_next: std::ptr::null(),
+                wait_semaphore_count: 1,
+                p_wait_semaphores: &self.v_semaphores_pipeline_done[self.current_frame_index],
+                swapchain_count: 1,
+                p_swapchains: &self.swapchain.inner,
+                p_image_indices: &infos_of_acquired_image.0,
+                p_results: std::ptr::null_mut(),
+            };
+            self.swapchain
+                .loader
+                .queue_present(self.context.queue, &present_info)
+                .expect("Cannot present image");
+
+            self.current_frame_index = (self.current_frame_index + 1) % FRAME_COUNT;
         }
-        true
     }
 }
 pub struct MyLowLevelRendererBuilder {
@@ -542,19 +466,74 @@ impl MyLowLevelRendererBuilder {
     }
 
     pub fn build(self) -> MyLowLevelRenderer {
-        let v_frames = self.allocate_frames();
-        if let (Some(vertex_buffer), Some(index_buffer)) = (self.vertex_buffer, self.index_buffer) {
-            return MyLowLevelRenderer {
-                window: self.window,
-                context: self.context,
-                surface: self.surface,
-                swapchain: self.swapchain,
-                vertex_buffer: vertex_buffer,
-                index_buffer: index_buffer,
-                v_frames: v_frames,
-            };
-        } else {
-            panic!("You need a vertex buffer, index buffer to build the renderer.");
+        unsafe {
+            let v_frames = self.allocate_frames();
+            if let (Some(vertex_buffer), Some(index_buffer)) =
+                (self.vertex_buffer, self.index_buffer)
+            {
+                let fence_create_info = ash::vk::FenceCreateInfo {
+                    s_type: ash::vk::StructureType::FENCE_CREATE_INFO,
+                    p_next: std::ptr::null(),
+                    flags: ash::vk::FenceCreateFlags::SIGNALED,
+                };
+
+                let semaphore_acquired_image_create_info = ash::vk::SemaphoreCreateInfo {
+                    s_type: ash::vk::StructureType::SEMAPHORE_CREATE_INFO,
+                    p_next: std::ptr::null(),
+                    flags: Default::default(),
+                };
+
+                let semaphore_pipeline_done_create_info = ash::vk::SemaphoreCreateInfo {
+                    s_type: ash::vk::StructureType::SEMAPHORE_CREATE_INFO,
+                    p_next: std::ptr::null(),
+                    flags: Default::default(),
+                };
+
+                let v_fences_wait_gpu = [
+                    self.context
+                        .logical_device
+                        .create_fence(&fence_create_info, None)
+                        .expect("Cannot create fence"),
+                    self.context
+                        .logical_device
+                        .create_fence(&fence_create_info, None)
+                        .expect("Cannot create fence"),
+                ];
+                let mut v_fences_ref_wait_gpu = vec![ash::vk::Fence::null(); self.swapchain.size()];
+                let mut v_semaphores_acquired_image = Vec::with_capacity(FRAME_COUNT);
+                let mut v_semaphores_pipeline_done = Vec::with_capacity(FRAME_COUNT);
+
+                for _ in 0..FRAME_COUNT {
+                    v_semaphores_acquired_image.push(
+                        self.context
+                            .logical_device
+                            .create_semaphore(&semaphore_acquired_image_create_info, None)
+                            .expect("Cannot create sempahore"),
+                    );
+                    v_semaphores_pipeline_done.push(
+                        self.context
+                            .logical_device
+                            .create_semaphore(&semaphore_pipeline_done_create_info, None)
+                            .expect("Cannot create sempahore"),
+                    );
+                }
+                return MyLowLevelRenderer {
+                    window: self.window,
+                    context: self.context,
+                    surface: self.surface,
+                    swapchain: self.swapchain,
+                    vertex_buffer: vertex_buffer,
+                    index_buffer: index_buffer,
+                    v_frames: v_frames,
+                    current_frame_index: 0,
+                    v_fences_wait_gpu: v_fences_wait_gpu,
+                    v_fences_ref_wait_gpu: v_fences_ref_wait_gpu,
+                    v_semaphores_acquired_image: v_semaphores_acquired_image,
+                    v_semaphores_pipeline_done: v_semaphores_pipeline_done,
+                };
+            } else {
+                panic!("You need a vertex buffer, index buffer to build the renderer.");
+            }
         }
     }
 
