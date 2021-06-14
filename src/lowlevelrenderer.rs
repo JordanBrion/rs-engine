@@ -473,8 +473,8 @@ impl MyLowLevelRendererBuilder {
         self
     }
 
-    pub fn uniform_buffer<T>(mut self, id: &MyId, content: &T) -> MyLowLevelRendererBuilder {
-        self.uniform_buffer_allocation_infos = Some((id.clone(), std::mem::size_of::<T>()));
+    pub fn uniform_buffer(mut self, id: &MyId, bytes_count: usize) -> MyLowLevelRendererBuilder {
+        self.uniform_buffer_allocation_infos = Some((id.clone(), bytes_count));
         self
     }
 

@@ -58,10 +58,10 @@ fn handle_events(event_pump: &mut sdl2::EventPump) -> bool {
 fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
     let camera = MyCamera::new();
-    let mut entity = MyGameEntity::new(&cube);
+    let mut entity_1 = MyGameEntity::new(&cube);
     let mut renderer = MyLowLevelRendererBuilder::new()
         .mesh(&cube)
-        .uniform_buffer(&entity.id, &entity.orientation)
+        .uniform_buffer(&entity_1.id, std::mem::size_of_val(&entity_1.orientation))
         .build();
 
     let mut event_pump = renderer
@@ -83,9 +83,9 @@ fn main() {
 
     while go {
         matrices.m_model = glm::rotate(&matrices.m_model, 0.01, &glm::vec3(0.0, 1.0, 0.0));
-        entity.orientation = matrices.m_projection * matrices.m_view * matrices.m_model;
+        entity_1.orientation = matrices.m_projection * matrices.m_view * matrices.m_model;
         renderer.acquire_image();
-        renderer.update(&entity);
+        renderer.update(&entity_1);
         renderer.run();
         go = handle_events(&mut event_pump);
     }
