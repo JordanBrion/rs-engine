@@ -38,8 +38,11 @@ pub struct MyLowLevelRenderer {
 impl MyLowLevelRenderer {
     pub fn update(&mut self, entity: &MyGameEntity) {
         unsafe {
-            self.v_frames[self.index_of_acquired_image]
-                .update_uniform_buffer(&self.context.logical_device, &entity.orientation);
+            self.v_frames[self.index_of_acquired_image].update_uniform_buffer(
+                &self.context.logical_device,
+                &entity.id,
+                &entity.orientation,
+            );
         }
     }
 
@@ -142,7 +145,7 @@ pub struct MyLowLevelRendererBuilder {
     graphics_pipeline: ash::vk::Pipeline,
     descriptor_pool: ash::vk::DescriptorPool,
     descriptor_set_layout: ash::vk::DescriptorSetLayout,
-    uniform_buffer_allocation_infos: Option<(MyId, usize)>,
+    v_uniform_buffer_allocation_infos: Vec<(MyId, usize)>,
     vertex_buffer: Option<MyVertexBuffer>,
     index_buffer: Option<MyIndexBuffer>,
 }
@@ -432,16 +435,17 @@ impl MyLowLevelRendererBuilder {
                     None,
                 )
                 .expect("Cannot create graphics pipeline");
+            let number_of_uniform_buffers = 2;
             let graphics_pipeline = v_graphics_pipelines[0];
             let descriptor_pool_size = ash::vk::DescriptorPoolSize {
                 ty: ash::vk::DescriptorType::UNIFORM_BUFFER,
-                descriptor_count: swapchain.size() as u32,
+                descriptor_count: swapchain.size() as u32 * number_of_uniform_buffers, // TODO make descriptor pool size dynamic !!
             };
             let descriptor_pool_create_info = ash::vk::DescriptorPoolCreateInfo {
                 s_type: ash::vk::StructureType::DESCRIPTOR_POOL_CREATE_INFO,
                 p_next: std::ptr::null(),
                 flags: ash::vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET,
-                max_sets: swapchain.size() as u32,
+                max_sets: swapchain.size() as u32 * number_of_uniform_buffers,
                 pool_size_count: 1,
                 p_pool_sizes: &descriptor_pool_size,
             };
@@ -460,7 +464,7 @@ impl MyLowLevelRendererBuilder {
                 graphics_pipeline: graphics_pipeline,
                 descriptor_pool: descriptor_pool,
                 descriptor_set_layout: descriptor_set_layout,
-                uniform_buffer_allocation_infos: None,
+                v_uniform_buffer_allocation_infos: Default::default(),
                 vertex_buffer: None,
                 index_buffer: None,
             }
@@ -474,7 +478,8 @@ impl MyLowLevelRendererBuilder {
     }
 
     pub fn uniform_buffer(mut self, id: &MyId, bytes_count: usize) -> MyLowLevelRendererBuilder {
-        self.uniform_buffer_allocation_infos = Some((id.clone(), bytes_count));
+        self.v_uniform_buffer_allocation_infos
+            .push((id.clone(), bytes_count));
         self
     }
 
@@ -554,7 +559,6 @@ impl MyLowLevelRendererBuilder {
     fn allocate_frames(&self) -> Vec<MyFrame> {
         let count = self.swapchain.size();
         let mut v_frames = Vec::with_capacity(count);
-        let ub_infos = self.uniform_buffer_allocation_infos.as_ref().unwrap();
         for i in 0..count {
             v_frames.push(MyFrame::new(
                 &self.context,
@@ -567,7 +571,7 @@ impl MyLowLevelRendererBuilder {
                 &self.graphics_pipeline,
                 &self.descriptor_pool,
                 &self.descriptor_set_layout,
-                ub_infos.clone(),
+                &self.v_uniform_buffer_allocation_infos,
                 self.vertex_buffer.as_ref().unwrap(),
                 self.index_buffer.as_ref().unwrap(),
             ));

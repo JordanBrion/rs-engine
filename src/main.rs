@@ -59,9 +59,11 @@ fn main() {
     let cube = read_mesh("resources/mesh/cube.obj");
     let camera = MyCamera::new();
     let mut entity_1 = MyGameEntity::new(&cube);
+    let mut entity_2 = MyGameEntity::new(&cube);
     let mut renderer = MyLowLevelRendererBuilder::new()
         .mesh(&cube)
         .uniform_buffer(&entity_1.id, std::mem::size_of_val(&entity_1.orientation))
+        .uniform_buffer(&entity_2.id, std::mem::size_of_val(&entity_2.orientation))
         .build();
 
     let mut event_pump = renderer
@@ -81,11 +83,21 @@ fn main() {
         m_projection: glm::perspective(16.0f32 / 9.0f32, 45.0f32, 1.0f32, 100.0f32),
     };
 
+    let mut model_1: glm::Mat4 = glm::identity();
+    model_1 = glm::scale(&model_1, &glm::vec3(1.0, 0.5, 1.0));
+    let mut model_2: glm::Mat4 = glm::identity();
+    model_2 = glm::scale(&model_2, &glm::vec3(1.0, 1.0, 1.0));
+    let translation_1: glm::Mat4 = glm::translate(&glm::identity(), &glm::vec3(2.0, 0.0, 0.0));
+    let translation_2: glm::Mat4 = glm::translate(&glm::identity(), &glm::vec3(-2.0, 0.0, 0.0));
+
     while go {
-        matrices.m_model = glm::rotate(&matrices.m_model, 0.01, &glm::vec3(0.0, 1.0, 0.0));
-        entity_1.orientation = matrices.m_projection * matrices.m_view * matrices.m_model;
+        model_1 = glm::rotate(&model_1, 0.01, &glm::vec3(0.0, 1.0, 0.0));
+        model_2 = glm::rotate(&model_2, -0.01, &glm::vec3(0.0, 1.0, 0.0));
+        entity_1.orientation = matrices.m_projection * matrices.m_view * translation_1 * model_1;
+        entity_2.orientation = matrices.m_projection * matrices.m_view * translation_2 * model_2;
         renderer.acquire_image();
         renderer.update(&entity_1);
+        renderer.update(&entity_2);
         renderer.run();
         go = handle_events(&mut event_pump);
     }

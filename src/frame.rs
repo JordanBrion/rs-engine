@@ -11,7 +11,7 @@ use crate::window::*;
 use ash::version::DeviceV1_0;
 
 pub struct MyFrame {
-    pub uniform_buffer: MyUniformBuffer,
+    pub v_uniform_buffers: std::collections::HashMap<MyId, MyUniformBuffer>,
     pub command_buffer: ash::vk::CommandBuffer,
 }
 
@@ -27,56 +27,13 @@ impl MyFrame {
         graphics_pipeline: &ash::vk::Pipeline,
         descriptor_pool: &ash::vk::DescriptorPool,
         descriptor_set_layout: &ash::vk::DescriptorSetLayout,
-        ub_infos: (MyId, usize),
+        v_ub_infos: &Vec<(MyId, usize)>,
         vertex_buffer: &MyVertexBuffer,
         index_buffer: &MyIndexBuffer,
     ) -> MyFrame {
         unsafe {
-            let uniform_buffer = MyUniformBuffer::new(context, ub_infos.1);
             let uniform_buffer_binding_number = 5; // TODO make dynamic
             let v_descriptor_set_layout = vec![*descriptor_set_layout; 1];
-            let descriptor_set_allocate_info = ash::vk::DescriptorSetAllocateInfo {
-                s_type: ash::vk::StructureType::DESCRIPTOR_SET_ALLOCATE_INFO,
-                p_next: std::ptr::null(),
-                descriptor_pool: *descriptor_pool,
-                descriptor_set_count: v_descriptor_set_layout.len() as u32,
-                p_set_layouts: v_descriptor_set_layout.as_ptr(),
-            };
-            let descriptor_set = context
-                .logical_device
-                .allocate_descriptor_sets(&descriptor_set_allocate_info)
-                .expect("Cannot allocate descriptor set")[0];
-            let command_buffer_allocate_info = ash::vk::CommandBufferAllocateInfo {
-                s_type: ash::vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
-                p_next: std::ptr::null(),
-                command_pool: context.command_pool,
-                level: ash::vk::CommandBufferLevel::PRIMARY,
-                command_buffer_count: swapchain.size() as u32,
-            };
-            let command_buffer = context
-                .logical_device
-                .allocate_command_buffers(&command_buffer_allocate_info)
-                .expect("Cannot allocate command buffer")[0];
-            let descriptor_buffer_info = ash::vk::DescriptorBufferInfo {
-                buffer: uniform_buffer.id,
-                offset: 0,
-                range: ash::vk::WHOLE_SIZE,
-            };
-            let descriptor_write = ash::vk::WriteDescriptorSet {
-                s_type: ash::vk::StructureType::WRITE_DESCRIPTOR_SET,
-                p_next: std::ptr::null(),
-                dst_set: descriptor_set,
-                dst_binding: uniform_buffer_binding_number,
-                dst_array_element: 0,
-                descriptor_count: 1,
-                descriptor_type: ash::vk::DescriptorType::UNIFORM_BUFFER,
-                p_image_info: std::ptr::null(),
-                p_buffer_info: &descriptor_buffer_info,
-                p_texel_buffer_view: std::ptr::null(),
-            };
-            context
-                .logical_device
-                .update_descriptor_sets(&[descriptor_write], &[]);
 
             let component_mapping = ash::vk::ComponentMapping {
                 r: ash::vk::ComponentSwizzle::IDENTITY,
@@ -133,6 +90,19 @@ impl MyFrame {
                     float32: [1.0, 0.0, 1.0, 1.0],
                 },
             };
+
+            let command_buffer_allocate_info = ash::vk::CommandBufferAllocateInfo {
+                s_type: ash::vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
+                p_next: std::ptr::null(),
+                command_pool: context.command_pool,
+                level: ash::vk::CommandBufferLevel::PRIMARY,
+                command_buffer_count: swapchain.size() as u32,
+            };
+            let command_buffer = context
+                .logical_device
+                .allocate_command_buffers(&command_buffer_allocate_info)
+                .expect("Cannot allocate command buffer")[0];
+
             let command_buffer_begin_info = ash::vk::CommandBufferBeginInfo {
                 s_type: ash::vk::StructureType::COMMAND_BUFFER_BEGIN_INFO,
                 p_next: std::ptr::null(),
@@ -160,14 +130,6 @@ impl MyFrame {
                 &render_pass_begin_info,
                 ash::vk::SubpassContents::INLINE,
             );
-            context.logical_device.cmd_bind_descriptor_sets(
-                command_buffer,
-                ash::vk::PipelineBindPoint::GRAPHICS,
-                *pipeline_layout,
-                0,
-                &[descriptor_set],
-                &[],
-            );
             context.logical_device.cmd_bind_pipeline(
                 command_buffer,
                 ash::vk::PipelineBindPoint::GRAPHICS,
@@ -185,27 +147,86 @@ impl MyFrame {
                 index_buffer.offset as u64,
                 ash::vk::IndexType::UINT16,
             );
-            context.logical_device.cmd_draw_indexed(
-                command_buffer,
-                index_buffer.number_of_indices as u32,
-                1,
-                0,
-                index_buffer.offset as i32,
-                0,
-            );
+
+            let mut v_uniform_buffers: std::collections::HashMap<MyId, MyUniformBuffer> =
+                Default::default();
+
+            for ub_infos in v_ub_infos {
+                let uniform_buffer = MyUniformBuffer::new(context, ub_infos.1);
+                let descriptor_set_allocate_info = ash::vk::DescriptorSetAllocateInfo {
+                    s_type: ash::vk::StructureType::DESCRIPTOR_SET_ALLOCATE_INFO,
+                    p_next: std::ptr::null(),
+                    descriptor_pool: *descriptor_pool,
+                    descriptor_set_count: v_descriptor_set_layout.len() as u32,
+                    p_set_layouts: v_descriptor_set_layout.as_ptr(),
+                };
+                let descriptor_set = context
+                    .logical_device
+                    .allocate_descriptor_sets(&descriptor_set_allocate_info)
+                    .expect("Cannot allocate descriptor set")[0];
+
+                let descriptor_buffer_info = ash::vk::DescriptorBufferInfo {
+                    buffer: uniform_buffer.id,
+                    offset: 0,
+                    range: ash::vk::WHOLE_SIZE,
+                };
+
+                let descriptor_write = ash::vk::WriteDescriptorSet {
+                    s_type: ash::vk::StructureType::WRITE_DESCRIPTOR_SET,
+                    p_next: std::ptr::null(),
+                    dst_set: descriptor_set,
+                    dst_binding: uniform_buffer_binding_number,
+                    dst_array_element: 0,
+                    descriptor_count: 1,
+                    descriptor_type: ash::vk::DescriptorType::UNIFORM_BUFFER,
+                    p_image_info: std::ptr::null(),
+                    p_buffer_info: &descriptor_buffer_info,
+                    p_texel_buffer_view: std::ptr::null(),
+                };
+                context
+                    .logical_device
+                    .update_descriptor_sets(&[descriptor_write], &[]);
+
+                context.logical_device.cmd_bind_descriptor_sets(
+                    command_buffer,
+                    ash::vk::PipelineBindPoint::GRAPHICS,
+                    *pipeline_layout,
+                    0,
+                    &[descriptor_set],
+                    &[],
+                );
+
+                context.logical_device.cmd_draw_indexed(
+                    command_buffer,
+                    index_buffer.number_of_indices as u32,
+                    1,
+                    0,
+                    index_buffer.offset as i32,
+                    0,
+                );
+                v_uniform_buffers.insert(ub_infos.0, uniform_buffer);
+            }
             context.logical_device.cmd_end_render_pass(command_buffer);
             context
                 .logical_device
                 .end_command_buffer(command_buffer)
                 .expect("Cannot end command buffer");
             MyFrame {
-                uniform_buffer: uniform_buffer,
+                v_uniform_buffers: v_uniform_buffers,
                 command_buffer: command_buffer,
             }
         }
     }
 
-    pub unsafe fn update_uniform_buffer<T>(&mut self, logical_device: &ash::Device, content: &T) {
-        self.uniform_buffer.update(logical_device, content);
+    pub unsafe fn update_uniform_buffer<T>(
+        &mut self,
+        logical_device: &ash::Device,
+        id: &MyId,
+        content: &T,
+    ) {
+        self.v_uniform_buffers
+            .get(id)
+            .unwrap()
+            .update(logical_device, content);
     }
 }

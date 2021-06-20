@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 static GLOBAL_ID: AtomicUsize = AtomicUsize::new(0);
 
-#[derive(Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, std::hash::Hash)]
 pub struct MyId {
     id: usize,
 }
